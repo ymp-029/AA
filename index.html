@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AA en カウンター</title>
+<style>
+:root{--bg:#fafaf7;--fg:#222;--sub:#777;--line:#d8d8d0;--panel:#fff;--over:#d9363e;--under:#c27a00;--ok:#1f8f4e;--acc:#3b5bdb;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#181a1b;--fg:#e6e6e0;--sub:#999;--line:#3a3d3f;--panel:#202324;--over:#ff6b72;--under:#f0b04a;--ok:#5fd18a;--acc:#8fa6ff}}
+:root[data-theme="dark"]{--bg:#181a1b;--fg:#e6e6e0;--sub:#999;--line:#3a3d3f;--panel:#202324;--over:#ff6b72;--under:#f0b04a;--ok:#5fd18a;--acc:#8fa6ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic",sans-serif;padding:16px;max-width:960px;margin-inline:auto}
+h1{font-size:18px;margin:0 0 4px}
+p.d{margin:0 0 12px;color:var(--sub);font-size:13px;line-height:1.6}
+.bar{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;margin-bottom:10px;font-size:13px}
+.bar label{display:flex;align-items:center;gap:6px}
+input[type=number]{width:70px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg)}
+button{padding:5px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg);cursor:pointer}
+.stat{margin-left:auto;color:var(--sub)}
+.stat b{color:var(--fg)}
+.wrap{display:flex;border:1px solid var(--line);border-radius:8px;background:var(--panel);height:60vh;min-height:280px;overflow:hidden}
+#g{width:96px;flex:none;overflow:hidden;border-right:1px solid var(--line);padding:10px 0;font:12px/16px ui-monospace,Menlo,Consolas,monospace;text-align:right;user-select:none}
+#g div{height:16px;padding-right:8px;white-space:nowrap}
+#g .n{color:var(--sub);margin-right:8px}
+#g .over{color:var(--over);font-weight:700}
+#g .under{color:var(--under)}
+#g .ok{color:var(--ok);font-weight:700}
+#t{flex:1;border:0;outline:0;resize:none;padding:10px;background:transparent;color:var(--fg);font:16px/16px "MS Gothic","Osaka-Mono","BIZ UDGothic","IPAGothic","Noto Sans Mono CJK JP","Source Han Code JP","Courier New",monospace;font-kerning:none;font-variant-ligatures:none;letter-spacing:0;white-space:pre;overflow:auto;tab-size:4}
+</style>
+</head>
+<body>
+<h1>AA en カウンター</h1>
+<p class="d">1行ごとの幅を「en」（半角=1、全角=2）で数えます。AAを貼り付けるか入力してください。</p>
+<div class="bar">
+<label>目標幅 <input id="tg" type="number" min="0" placeholder="例 40"></label>
+<label><input id="am" type="checkbox" checked> ○●─▲などを全角(2)扱い</label>
+<button id="cp">行数付きでコピー</button>
+<span class="stat" id="st"></span>
+</div>
+<div class="wrap">
+<div id="g"></div>
+<textarea id="t" wrap="off" spellcheck="false" placeholder="ここにAAを貼り付け"></textarea>
+</div>
+<script>
+(function(){
+var t=document.getElementById('t'),g=document.getElementById('g'),tg=document.getElementById('tg'),am=document.getElementById('am'),st=document.getElementById('st');
+var AMB=[[0x391,0x3c9],[0x401,0x451],[0x2010,0x203b],[0x2190,0x21ff],[0x2200,0x22ff],[0x2460,0x24ff],[0x2500,0x257f],[0x25a0,0x25ff],[0x2600,0x26ff]];
+var WIDE=[[0x1100,0x115f],[0x2e80,0x303e],[0x3041,0x33ff],[0x3400,0x4dbf],[0x4e00,0xa4cf],[0xac00,0xd7a3],[0xf900,0xfaff],[0xfe30,0xfe6f],[0xff01,0xff60],[0xffe0,0xffe6],[0x1f300,0x1f64f],[0x1f900,0x1f9ff],[0x20000,0x3fffd]];
+function inR(c,r){for(var i=0;i<r.length;i++)if(c>=r[i][0]&&c<=r[i][1])return true;return false}
+function w(c){
+if(c===0x200d||c===0xfe0f||(c>=0x300&&c<=0x36f)||(c>=0x3099&&c<=0x309a&&false))return 0;
+if(c<0x80)return c>=0x20?1:0;
+if(c>=0xff61&&c<=0xff9f)return 1;
+if(inR(c,WIDE))return 2;
+if(am.checked&&inR(c,AMB))return 2;
+return 1}
+function len(s){var n=0;for(var ch of s)n+=w(ch.codePointAt(0));return n}
+function render(){
+var lines=t.value.split('\n'),T=parseInt(tg.value,10),h='',mx=0,mn=1e9;
+lines.forEach(function(l,i){
+var n=len(l.replace(/\r$/,''));mx=Math.max(mx,n);mn=Math.min(mn,n);
+var c='';if(!isNaN(T)&&l.length)c=n>T?'over':(n<T?'under':'ok');
+h+='<div class="'+c+'"><span class="n">'+(i+1)+'</span>'+n+'</div>'});
+g.innerHTML=h;g.scrollTop=t.scrollTop;
+st.innerHTML='行数 <b>'+lines.length+'</b> ／ 最大 <b>'+mx+'</b> ／ 最小 <b>'+(mn===1e9?0:mn)+'</b>'}
+t.addEventListener('input',render);
+t.addEventListener('scroll',function(){g.scrollTop=t.scrollTop});
+tg.addEventListener('input',render);am.addEventListener('change',render);
+document.getElementById('cp').addEventListener('click',function(){
+var out=t.value.split('\n').map(function(l){return len(l)+'\t'+l}).join('\n');
+try{navigator.clipboard.writeText(out)}catch(e){}});
+render();
+})();
+</script>
+</body>
+</html>
